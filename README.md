@@ -1,43 +1,45 @@
-# WebP 并行压缩效率对比
+# WebP Compression Efficiency Comparison
 
-我之前实现了一个[基于 Tauri 的 WebP 图片压缩软件](https://github.com/Exception0x0194/webp-compressor)，压缩的软件功能由 Rust 实现，比很多现行的图像压缩软件快得多。但是 Rust 究竟给软件的效率作出了多少贡献？为了解开这个疑惑，我用几种不同的语言编写了并行压缩图像到 WebP 并保存的命令行工具，测试这些语言在这项任务中的效率。
+[简体中文](/README_zh-CN.md)
 
-构建命令行工具的代码如[项目 Repo](https://github.com/Exception0x0194/webp-compression-comparison) 中所示，使用的语言包括 `Python`、`Javascript`、`Go` 和 `Rust`。这些命令行工具均接受三个参数：
+I previously developed a [WebP image compression software based on Tauri](https://github.com/Exception0x0194/webp-compressor) implemented in Rust, which is much faster than many current image compression softwares. But how much does Rust actually contribute to the efficiency of the software? To unravel this question, I wrote command line tools in several different languages to parallel compress images to WebP and save them, testing the efficiency of these languages in this task.
 
-- `--input-dir <dir>`：输入图片所在的文件夹；
-- `--quality <number>`：WebP 压缩质量分；
-- `--output-dir <dir>`：输出图片的文件夹。
+The code for building the command line tools is shown in the [project Repo](https://github.com/Exception0x0194/webp-compression-comparison), using languages including `Python`, `JavaScript`, `Go`, and `Rust`. These command line tools all accept three parameters:
 
-## 测试环境
+- `--input-dir <dir>`: The folder where the input images are located.
+- `--quality <number>`: WebP compression quality.
+- `--output-dir <dir>`: The folder where the output images are stored.
 
-- **系统参数**
-  - **CPU**：AMD R5-5600
-  - **Windows10**：22H2 19045.4651
-  - **WSL**：Ubuntu 24.04 LTS
-- **测试输入**
-  - **输入图片**：3000 张 PNG 图片，分辨率 1280x1856
-  - **压缩质量**：90
+## Test Environment
 
-## 测试结果
+- **System Parameters**
+  - **CPU**: AMD R5-5600
+  - **Windows10**: 22H2 19045.4651
+  - **WSL**: Ubuntu 24.04 LTS
+- **Test Input**
+  - **Input Images**: 3000 PNG images, resolution 1280x1856
+  - **Compression Quality**: 90
 
-| 语言    | 用时/s - Windows 10 | 用时/s - WSL | 补充                                                         |
-| ------- | ------------------- | ------------ | ------------------------------------------------------------ |
-| Python  | 101.48              | 155.60       | Python==3.11.7(Win)/3.12.3(WSL), Pillow==9.5.0               |
-| Node.js | 182.90              | 388.56       | Node==20.15.0(Win)/18.19.1(WSL), Sharp==0.33.4               |
-| Rust    | 87.63               | 99.50        | rustc==1.79.0, webp==0.3.0, image==0.25.1, rayon==1.10.0     |
-| Go      |                     | 160.93       | go==1.22.2, [go-webp](github.com/kolesa-team/go-webp)==1.0.4 |
+## Test Results
 
-> 在测试时，除了 Nodejs，其它语言均在运行时使 CPU 满载，因此应当可以忽略磁盘 IO 等其它因素对效率的影响。
+| Language | Time/s - Windows 10 | Time/s - WSL | Notes                                                        |
+| -------- | ------------------- | ------------ | ------------------------------------------------------------ |
+| Python   | 101.48              | 155.60       | Python==3.11.7(Win)/3.12.3(WSL), Pillow==9.5.0               |
+| Node.js  | 182.90              | 388.56       | Node==20.15.0(Win)/18.19.1(WSL), Sharp==0.33.4               |
+| Rust     | 87.63               | 99.50        | rustc==1.79.0, webp==0.3.0, image==0.25.1, rayon==1.10.0     |
+| Go       |                     | 160.93       | go==1.22.2, [go-webp](github.com/kolesa-team/go-webp)==1.0.4 |
 
-> 检查了输出文件内容，发现数据完全相同，应当是调用了相同的方法对图片进行有损压缩（大概都来自 libwebp）。
+> During testing, except for Node.js, other languages fully loaded the CPU, so disk IO and other factors affecting efficiency can likely be ignored.
 
-## 讨论和结论
+> After checking the output file content, it was found that the data were exactly the same, seems that the same methods are used for lossy compression of images (probably from libwebp).
 
-- Python 虽然是解释型语言，不过调用的库内部效率很高，总体效率直逼编译型语言（实际上已经超过了 Go）；
-- Nodejs 的 Workers 调用不太方便，似乎也不太适合做高 IO、高计算负载的工作，是唯一一个在测试时没有让 CPU 满载的；
-- Rust 虽然语法严格，不过在各种包的帮助下开发并不困难，效率也是最高的。在 WSL 环境下，性能损失也比其它语言更小；
-- Go 官方提供的 webp 库只能解码图像，而社区提供的 go-webp 库在编译时需要 libwebp，在 Windows 上难以配置，因此只在 WSL 上编译并测试。然而却出乎意料地相当慢（即使使用了 `-ldflags "-s -w"`），可能是库的优化问题？
+## Discussion and Conclusion
 
-看来使用 Rust 库是相当正确的决策。通过这项测试，发现 Rust 在处理高 IO 和 CPU 密集型任务，如图像压缩时，展现出了卓越的性能。Rust 不仅在 Windows 系统上性能优异，在 WSL 环境下相较于其他语言也显示出较小的性能损失，这证明了其稳定性和高效性。
+- Although Python is an interpreted language, the libraries it calls internally are highly efficient, with overall efficiency close to compiled languages (in fact, it has surpassed Go).
+- Node.js's Workers are not very convenient to use and seem ill-suited for high IO and compute-load tasks, being the only one that did not fully load the CPU during testing.
+- Rust, while having a strict syntax, is not difficult to develop with the help of various packages, and it also has the highest efficiency. In the WSL environment, the performance loss is also smaller than other languages.
+- The official Go webp library can only decode images, while the community-provided go-webp library requires libwebp during compilation, making it difficult to configure on Windows, so it was only compiled and tested on WSL. However, it was unexpectedly slow (even with `-ldflags "-s -w"`), which may be a problem with library optimization.
 
-Python 是一个解释型语言，它通常不会被认为是性能最优的选择，特别是在需要大量计算和数据处理的场景中。然而，通过使用经过良好优化的第三方库，Python 也能在处理重负载任务时展现出令人惊讶的高性能，其中的一些库甚至能与编译型语言如 C++ 和 Rust 的性能相媲美。考虑到 Python 在开发效率上的额外优势，在一些快速开发工作中，编写 Python 脚本处理数据也是一个不错的选择。
+It appears that using Rust libraries was a very correct decision. Through this test, it was found that Rust exhibits outstanding performance in handling high IO and CPU intensive tasks, such as image compression. Rust not only performs well on Windows systems but also shows smaller performance loss in WSL environments compared to other languages, demonstrating its stability and efficiency.
+
+Python, as an interpreted language, is not typically considered the best choice for performance, especially in scenarios requiring extensive computation and data processing. However, by utilizing well-optimized third-party libraries, Python can also demonstrate surprisingly high performance in handling heavy-load tasks, with some libraries even competing with compiled languages like C++ and Rust. Considering Python's additional advantage in development efficiency, writing Python scripts for data processing tasks in some fast-paced development contexts is also a good choice.
