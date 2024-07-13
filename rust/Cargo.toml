@@ -1,0 +1,10 @@
+[package]
+name = "webp-compressor"
+description = ""
+version = "0.0.1"
+
+[dependencies]
+clap = "4.5.7"
+image = "0.25.1"
+rayon = "1.10.0"
+webp = "0.3.0"
